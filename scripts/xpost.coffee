@@ -6,28 +6,25 @@
 # Configuration: none
 #
 # Commands:
-#   mention "XPOST @somechannel" in any message
-#
-# Notes:
-#   Charlie will not tell you right now if the post has failed to the other channel (if Charlie's not there, if Charlie can't post, etc)
+#   mention "XPOST #somechannel" in any message
 #
 # Author:
 #   @afeld and @wslack
 
-isInChannel = (robot, channel) ->
+getInChannelObjectFromAPI = (robot, listType, channel) ->
   new Promise((resolve, reject) ->
-    robot.adapter.client.web.channels.list (err, res) ->
+    robot.adapter.client.web[listType].list (err, res) ->
       if err
         return reject(err)
       else if !res.ok
         return reject(new Error('Unknown error with Slack API'))
 
       channelID = null;
-      target = res.channels.filter((c) ->
+      if listType == 'groups'
+      target = res[listType].filter((c) ->
         if c.name == channel
           channelID = c.id
-          if c.is_member
-            return true
+          return c.is_member || listType == 'groups'
         false
       )
       resolve
@@ -36,6 +33,12 @@ isInChannel = (robot, channel) ->
       return
     return
 )
+
+isInChannel = (robot, channel) ->
+  return getInChannelObjectFromAPI(robot, 'channels', channel).then (result) ->
+    if !result.inChannel
+      return getInChannelObjectFromAPI(robot, 'groups', channel);
+    return result
 
 addReaction = (robot, reaction, channelID, messageID) ->
   new Promise((resolve, reject) ->
