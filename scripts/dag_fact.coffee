@@ -69,6 +69,7 @@ facts = [
       She was totally fine.''',
   ''':winry-headache: Winry has heterochromia - one eye is solid blue
       but the other is half blue,half brown.''',
+  ''':ripley-dag: Things Ripley has calmly slept through: 4th of July fireworks, the dogs next door barking incessantly, the roof being replaced, etc.''',
   ''':zoey: Zoey thinks she is the cat police at our house:
       if they are fighting (usually playfully) with each other, she runs up to them,
       sits in front of them and whines until they stop.''',
