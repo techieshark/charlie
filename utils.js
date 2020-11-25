@@ -54,7 +54,7 @@ const cache = (() => {
 module.exports = {
   cache,
   setup: (robot) => {
-    const webAPI = new slack.WebClient(robot.adapter.options.token);
+    const webAPI = ""; // new slack.WebClient(robot.adapter.options.token);
 
     const addEmojiReaction = async (reaction, channelID, messageID) => {
       return new Promise((resolve, reject) => {
@@ -171,45 +171,27 @@ module.exports = {
      * @param {Object} robot Hubot robot object
      * @returns {Promise<Array<Object>>} A list of Slack users.
      */
-    const getSlackUsers = async () => {
-      return cache("get slack users", 10, () => {
-        return new Promise((resolve, reject) => {
-          robot.adapter.client.web.users.list((err, response) => {
-            if (err) {
-              return reject(err);
-            }
-            return resolve(response.members);
-          });
-        });
+    const getSlackUsers = async (client) => {
+      return cache("get slack users", 10, async () => {
+        const { members } = await client.users.list();
+        return members;
       });
     };
 
-    const getSlackUsersInConversation = async (conversationID) => {
+    const getSlackUsersInConversation = async ({
+      client,
+      event: { channel },
+    }) => {
       return cache(
-        `get slack users in conversation ${conversationID}`,
+        `get slack users in conversation ${channel}`,
         10,
-        () => {
-          return new Promise((resolve, reject) => {
-            robot.adapter.client.web.conversations.members(
-              conversationID,
-              async (err, response) => {
-                if (err) {
-                  return reject(err);
-                }
-
-                try {
-                  const channelUsers = response.members;
-                  const allUsers = await getSlackUsers();
-
-                  return resolve(
-                    allUsers.filter(({ id }) => channelUsers.includes(id))
-                  );
-                } catch (e) {
-                  return reject(e);
-                }
-              }
-            );
+        async () => {
+          const { members: channelUsers } = await client.conversations.members({
+            channel,
           });
+          const { members: allUsers } = await client.users.list();
+
+          return allUsers.filter(({ id }) => channelUsers.includes(id));
         }
       );
     };
@@ -248,18 +230,8 @@ module.exports = {
 
       return tockSlackUsers;
     };
-    const postEphemeralMessage = async (message) =>
-      new Promise((resolve, reject) => {
-        webAPI.chat.postEphemeral(message, (err, response) => {
-          if (err) {
-            return reject(err);
-          }
-          if (!response.ok) {
-            return reject(new Error("Unknown error with Slack API"));
-          }
-          return resolve();
-        });
-      });
+    const postEphemeralMessage = async (event, message) =>
+      event.client.chat.postEphemeral(message);
 
     return {
       addEmojiReaction,

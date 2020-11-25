@@ -4,9 +4,4 @@ applications:
   buildpack: nodejs_buildpack
   memory: 192MB
   instances: 1
-  no-route: true
-  health-check-type: process
-  host: charlie
-  services:
-    - charlie-redis32
-    - charlie-bucket
+  host: charlie-dev

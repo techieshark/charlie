@@ -5,4 +5,5 @@ slack.yml
 .hubot_history
 .env
 .vscode
-./test
+coverage
+test
