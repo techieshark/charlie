@@ -1,76 +1,74 @@
-const defaultWebClient = require("@slack/client").WebClient;
 const utils = require("../utils");
 
 const brainKey = "coffeemate_queue";
 
-module.exports = (robot, { WebClient = defaultWebClient } = {}) => {
-  const webAPI = new WebClient(robot.adapter.options.token);
+const baseResponse = {
+  icon_emoji: ":coffee:",
+  username: "Coffeemate",
+};
+
+module.exports = (robot) => {
   const queue = robot.brain.get(brainKey) || [];
 
-  const { addEmojiReaction } = utils.setup(robot);
+  const { addEmojiReaction, postEphemeralResponse } = utils.setup(robot);
 
-  robot.hear(/coffee me/i, (res) => {
-    addEmojiReaction("coffee", res.message.room, res.message.id);
+  robot.message(/coffee me/i, async (message) => {
+    await addEmojiReaction(message, "coffee");
+    const {
+      event: { user },
+    } = message;
 
     // First, is the current user in already in the queue?
     // If so, just let them know
-    if (queue.includes(res.message.user.id)) {
-      webAPI.chat.postEphemeral({
-        channel: res.message.room,
-        user: res.message.user.id,
+    if (queue.includes(user)) {
+      await postEphemeralResponse(message, {
+        ...baseResponse,
         text:
           "You’re already in the queue. As soon as we find someone else to meet with, we’ll introduce you!",
-        as_user: true,
       });
       return;
     }
 
     // If we didn't bail out already, add the current user to the queue
-    queue.push(res.message.user.id);
+    queue.push(user);
     robot.brain.set(brainKey, queue);
     robot.brain.save();
 
     // Now do we have a pair or not?
     if (queue.length < 2) {
-      webAPI.chat.postEphemeral({
-        channel: res.message.room,
-        user: res.message.user.id,
+      await postEphemeralResponse(message, {
+        ...baseResponse,
         text:
           "You’re in line for coffee! You’ll be introduced to the next person who wants to meet up.",
-        as_user: true,
       });
     } else {
       // pair them up
-      webAPI.chat.postEphemeral({
-        channel: res.message.room,
-        user: res.message.user.id,
+      await postEphemeralResponse(message, {
+        ...baseResponse,
         text: `You’ve been matched up for coffee with <@${queue[0]}>! `,
-        as_user: true,
       });
 
       // Now start a 1:1 DM chat between the people in queue.
-      robot.adapter.client.web.mpim.open(queue.join(","), (err, mpim) => {
-        if (err || !mpim.ok) {
-          robot.logger.warning("Error with Slack API", err);
-          return;
-        }
-
-        const msg =
-          "You two have been paired up for coffee. The next step is to figure out a time that works for both of you. Enjoy! :coffee:";
-
-        // mpim.send msg
-        robot.messageRoom(mpim.group.id, {
-          text: msg,
-          username: "coffeemate",
-          icon_emoji: ":coffee:",
-          as_user: false,
-        });
-
-        // then empty the queue again
-        queue.length = 0;
-        robot.brain.set(brainKey, queue);
-        robot.brain.save();
+      const mpim = await message.client.conversations.open({
+        users: queue.join(","),
       });
+      if (!mpim.ok) {
+        console.error("Error with Slack API");
+        return;
+      }
+
+      // // mpim.send msg
+      message.client.chat.postMessage({
+        ...baseResponse,
+        channel: mpim.channel.id,
+        text:
+          "You two have been paired up for coffee. The next step is to figure out a time that works for both of you. Enjoy! :coffee:",
+      });
+
+      // then empty the queue again
+      queue.length = 0;
+      robot.brain.set(brainKey, queue);
+      robot.brain.save();
     }
   });
 };

@@ -10,30 +10,42 @@
 //  Author:
 //    lauraggit
 
+const { directMention } = require("@slack/bolt");
+const axios = require("axios");
+
 // :greenlight: :redlight: :yellowlight:
 const icons = {
-  Open: ':greenlight:',
-  Alert: ':yellowlight:',
-  Closed: ':redlight:'
+  Open: ":greenlight:",
+  Alert: ":yellowlight:",
+  Closed: ":redlight:",
 };
 
-module.exports = robot => {
-  robot.respond(/opm status/i, msg => {
-    msg.http('https://www.opm.gov/json/operatingstatus.json').get()(
-      (err, res, body) => {
-        if (err || res.statusCode !== 200) {
-          msg.send('Well, what does Capital Weather Gang say?');
-        } else {
-          const status = JSON.parse(body);
-          msg.send({
-            text: `${icons[status.Icon]} ${status.StatusSummary} for ${
-              status.AppliesTo
-            }. (<${status.Url}|Read more>)`,
-            unfurl_links: false,
-            unfurl_media: false
-          });
+module.exports = (robot) => {
+  robot.message(
+    directMention(),
+    /opm status/i,
+    async ({ event: { thread_ts: thread }, say }) => {
+      try {
+        const { data, status } = await axios.get(
+          "https://www.opm.gov/json/operatingstatus.json"
+        );
+        if (status !== 200) {
+          throw new Error("Invalid status");
         }
+        say({
+          icon_emoji: icons[data.Icon],
+          text: `${data.StatusSummary} for ${data.AppliesTo}. (<${data.Url}|Read more>)`,
+          thread_ts: thread,
+          unfurl_links: false,
+          unfurl_media: false,
+        });
+      } catch (e) {
+        say({
+          text:
+            "I didn't get a response from OPM, so... what does Capital Weather Gang say?",
+          thread_ts: thread,
+        });
       }
-    );
-  });
+    }
+  );
 };

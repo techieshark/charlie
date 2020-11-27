@@ -4,12 +4,13 @@
    with what we've got.
 */
 
+const { directMention } = require("@slack/bolt");
 const moment = require("moment-timezone");
 
 const march1 = moment.tz("2020-03-01T00:00:00Z", "America/New_York");
 
 module.exports = (app) => {
-  app.respond(/what day is it/i, ({ say }) => {
+  app.message(directMention(), /what day is it/i, ({ say }) => {
     const now = moment.tz("America/New_York");
 
     const isBlursday = Math.random() < 0.2;

@@ -1,49 +1,38 @@
-const holidays = require('@18f/us-federal-holidays');
-const moment = require('moment');
+const holidays = require("@18f/us-federal-holidays");
+const moment = require("moment");
 
-const closedDays = ['Saturday', 'Sunday'];
+const closedDays = ["Saturday", "Sunday"];
 
 const getChannelName = (() => {
-  let allRooms = null;
-  return async (robot, roomID) => {
-    if (allRooms === null) {
-      await new Promise((resolve, reject) => {
-        robot.adapter.client.web.conversations.list((err, res) => {
-          if (err) {
-            reject(err);
-          }
-          allRooms = res.channels.reduce(
-            (rooms, { id, name }) => ({
-              ...rooms,
-              [id]: name
-            }),
-            {}
-          );
-          resolve();
-        });
-      });
+  let allChannels = null;
+  return async (client, channelID) => {
+    if (allChannels === null) {
+      const response = await client.conversations.list();
+      allChannels = response.channels.reduce(
+        (channels, { id, name }) => ({ ...channels, [id]: name }),
+        {}
+      );
     }
-
-    return allRooms[roomID];
+    return allChannels[channelID];
   };
 })();
 
 const travelIsClosed = () =>
-  holidays.isAHoliday() || closedDays.includes(moment().format('dddd'));
+  holidays.isAHoliday() || closedDays.includes(moment().format("dddd"));
 
 const getNextWorkday = () => {
-  const m = moment().add(1, 'day');
+  const m = moment().add(1, "day");
   while (
-    closedDays.includes(m.format('dddd')) ||
+    closedDays.includes(m.format("dddd")) ||
     holidays.isAHoliday(m.toDate())
   ) {
-    m.add(1, 'day');
+    m.add(1, "day");
   }
-  return m.format('dddd');
+  return m.format("dddd");
 };
 
 const pastResponses = [];
-const getHasRespondedToUserRecently = userID => {
+const getHasRespondedToUserRecently = (userID) => {
   // First, remove all previous responses that were over three hours ago
   const threeHoursAgo = Date.now() - 3 * 60 * 60 * 1000;
   for (let i = 0; i < pastResponses.length; i += 1) {
@@ -54,26 +43,28 @@ const getHasRespondedToUserRecently = userID => {
   }
 
   // Now check if any of the remaining responses are for this user
-  return pastResponses.some(p => p.user === userID);
+  return pastResponses.some((p) => p.user === userID);
 };
 
-module.exports = robot => {
-  robot.hear(/.*/, async msg => {
-    const channel = await getChannelName(robot, msg.message.room);
-    const user = msg.message.user.id;
+module.exports = (robot) => {
+  robot.message(
+    /.*/,
+    async ({ client, event: { channel, thread_ts: thread, user }, say }) => {
+      const channelName = await getChannelName(client, channel);
 
-    if (
-      channel === 'travel' &&
-      travelIsClosed() &&
-      !getHasRespondedToUserRecently(user)
-    ) {
-      pastResponses.push({ user, time: Date.now() });
-      msg.send({
-        as_user: false,
-        icon_emoji: ':tts:',
-        text: `Hi <@${user}>. The TTS travel team is unavailable on weekends and holidays. If you need to change your flight for approved travel, contact AdTrav at (877) 472-6716. For after-hours emergency travel authorizations, see <https://handbook.tts.gsa.gov/travel-guide-b-after-hours-emergency-travel-authorizations/|the Handbook>. For other travel-related issues, such as an approval in Concur, please drop a new message in this channel ${getNextWorkday()} morning and someone will respond promptly.`,
-        username: 'TTS Travel Team'
-      });
+      if (
+        channelName === "travel" &&
+        travelIsClosed() &&
+        !getHasRespondedToUserRecently(user)
+      ) {
+        pastResponses.push({ user, time: Date.now() });
+        say({
+          icon_emoji: ":tts:",
+          text: `Hi <@${user}>. The TTS travel team is unavailable on weekends and holidays. If you need to change your flight for approved travel, contact AdTrav at (877) 472-6716. For after-hours emergency travel authorizations, see <https://handbook.tts.gsa.gov/travel-guide-b-after-hours-emergency-travel-authorizations/|the Handbook>. For other travel-related issues, such as an approval in Concur, please drop a new message in this channel ${getNextWorkday()} morning and someone will respond promptly.`,
+          thread_ts: thread,
+          username: "TTS Travel Team",
+        });
+      }
     }
-  });
+  );
 };

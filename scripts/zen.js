@@ -13,11 +13,16 @@
 // Author:
 //   anildigital
 //
+const { directMention } = require("@slack/bolt");
+const axios = require("axios");
 
-module.exports = robot => {
-  robot.respond(/\bzen\b/i, msg => {
-    msg.http('https://api.github.com/zen').get()((err, res, body) => {
-      msg.send(body);
-    });
-  });
+module.exports = (app) => {
+  app.message(
+    directMention(),
+    /\bzen\b/i,
+    async ({ event: { thread_ts: thread }, say }) => {
+      const { data } = await axios.get("https://api.github.com/zen");
+      say({ text: data, thread_ts: thread });
+    }
+  );
 };

@@ -1,5 +1,3 @@
-const slack = require("@slack/client");
-
 const CACHE_MAX_LIFE = 20 * 60 * 1000;
 
 const cache = (() => {
@@ -54,27 +52,13 @@ const cache = (() => {
 module.exports = {
   cache,
   setup: (robot) => {
-    const webAPI = ""; // new slack.WebClient(robot.adapter.options.token);
+    const addEmojiReaction = async (msg, reaction) => {
+      const {
+        client,
+        event: { channel, ts: timestamp },
+      } = msg;
 
-    const addEmojiReaction = async (reaction, channelID, messageID) => {
-      return new Promise((resolve, reject) => {
-        robot.adapter.client.web.reactions.add(
-          reaction,
-          {
-            channel: channelID,
-            timestamp: messageID,
-          },
-          (err, response) => {
-            if (err) {
-              return reject(err);
-            }
-            if (!response.ok) {
-              return reject(new Error("Unknown error with Slack API"));
-            }
-            return resolve();
-          }
-        );
-      });
+      return client.reactions.add({ name: reaction, channel, timestamp });
     };
 
     /**
@@ -189,7 +173,7 @@ module.exports = {
           const { members: channelUsers } = await client.conversations.members({
             channel,
           });
-          const { members: allUsers } = await client.users.list();
+          const allUsers = await getSlackUsers(client);
 
           return allUsers.filter(({ id }) => channelUsers.includes(id));
         }
@@ -230,8 +214,24 @@ module.exports = {
 
       return tockSlackUsers;
     };
-    const postEphemeralMessage = async (event, message) =>
-      event.client.chat.postEphemeral(message);
+
+    const postEphemeralResponse = async (toMsg, message) => {
+      const {
+        client,
+        event: { channel, thread_ts: thread, user },
+      } = toMsg;
+      try {
+        await client.chat.postEphemeral({
+          ...message,
+          user,
+          channel,
+          thread_ts: thread,
+        });
+      } catch (e) {
+        console.log(JSON.stringify(message, null, 2));
+        console.log(e);
+      }
+    };
 
     return {
       addEmojiReaction,
@@ -243,7 +243,7 @@ module.exports = {
       },
       getSlackUsers,
       getSlackUsersInConversation,
-      postEphemeralMessage,
+      postEphemeralResponse,
     };
   },
 };
