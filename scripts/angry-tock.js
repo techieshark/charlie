@@ -21,8 +21,6 @@ const ANGRY_TOCK_REPORT_TO = (
   process.env.ANGRY_TOCK_REPORT_TO || "#18f-supes"
 ).split(",");
 
-let util;
-
 /**
  * Get the current time in the configured timezone.
  * @returns {Moment} A moment object representing the current time in the
@@ -48,8 +46,8 @@ let shout = (robot) => {
       as_user: false,
     };
 
-    const tockSlackUsers = await util.tock.get18FTockSlackUsers();
-    const truants = await util.tock.get18FTockTruants(m());
+    const tockSlackUsers = await utils.tock.get18FTockSlackUsers();
+    const truants = await utils.tock.get18FTockTruants(m());
     const slackableTruants = tockSlackUsers.filter((tu) =>
       truants.some((t) => t.email === tu.email)
     );
@@ -172,20 +170,18 @@ const scheduleNextShoutingMatch = () => {
   });
 };
 
-module.exports = async (robot) => {
+module.exports = async (app) => {
   if (!TOCK_API_URL || !TOCK_TOKEN) {
-    robot.logger.warning(
+    app.logger.warn(
       "AngryTock disabled: Tock API URL or access token is not set"
     );
     return;
   }
 
-  util = utils.setup(robot);
-
-  robot.logger.info("AngryTock starting up");
+  app.logger.info("AngryTock starting up");
 
   // Setup the shouty method, to create a closure around the robot object.
-  shout(robot);
+  shout(app);
 
   scheduleNextShoutingMatch();
 };

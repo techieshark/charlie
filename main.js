@@ -1,11 +1,14 @@
 require("dotenv").config();
 const { App } = require("@slack/bolt");
-const fs = require("fs/promises");
+const fs = require("fs").promises;
+const { setClient } = require("./utils/slack");
 
 const app = new App({
   token: process.env.SLACK_TOKEN,
   signingSecret: process.env.SLACK_SIGNING_SECRET,
 });
+
+app.logger.setName("18F Charlie bot");
 
 const BRAIN = new Map();
 app.brain = {
@@ -30,18 +33,17 @@ app.respond = (trigger, callback) => {
 
 const port = process.env.PORT || 3000;
 app.start(port).then(async () => {
-  console.log(`Bot started on ${port}`);
+  app.logger.info(`Bot started on ${port}`);
+  setClient(app.client);
 
   const files = (await fs.readdir("scripts")).filter((file) =>
     file.endsWith(".js")
   );
   files.forEach((file) => {
-    const script = require(`./scripts/${file}`);
+    const script = require(`./scripts/${file}`); // eslint-disable-line global-require,import/no-dynamic-require
     if (typeof script === "function") {
-      console.log(`Loading bot script from: ${file}`);
+      app.logger.info(`Loading bot script from: ${file}`);
       script(app);
     }
   });
-
-  // script(app);
 });

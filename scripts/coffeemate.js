@@ -1,4 +1,6 @@
-const utils = require("../utils");
+const {
+  slack: { addEmojiReaction, postEphemeralResponse },
+} = require("../utils");
 
 const brainKey = "coffeemate_queue";
 
@@ -9,8 +11,6 @@ const baseResponse = {
 
 module.exports = (robot) => {
   const queue = robot.brain.get(brainKey) || [];
-
-  const { addEmojiReaction, postEphemeralResponse } = utils.setup(robot);
 
   robot.message(/coffee me/i, async (message) => {
     await addEmojiReaction(message, "coffee");

@@ -1,5 +1,7 @@
 const moment = require("moment-timezone");
-const utils = require("../utils");
+const {
+  slack: { getSlackUsersInConversation },
+} = require("../utils");
 
 const TIMEZONES = {
   akt: "America/Anchorage",
@@ -29,8 +31,6 @@ const TIMEZONES = {
 const matcher = /(\d{1,2}:\d{2}\s?(am|pm)?)\s?(((ak|a|c|e|m|p)(s|d)?t)|:(eastern|central|mountain|pacific)-time-zone:)?/i;
 
 module.exports = (robot) => {
-  const { getSlackUsersInConversation } = utils.setup(robot);
-
   robot.message(matcher, async (msg) => {
     const { channel, text, thread_ts: thread, user } = msg.event;
 

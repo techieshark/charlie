@@ -1,10 +1,8 @@
-const utils = require("../utils");
+const { slack: addEmojiReaction, postEphemeralResponse } = require("../utils");
 
 const guysRegex = /(?<!boba )(?<!five )(?<!5 )(?<!halal )guy(s|z)(?=[^"“”']*(["“”'][^"“”']*["“”'][^"“”']*)*$)/i;
 
 module.exports = (robot) => {
-  const { addEmojiReaction, postEphemeralResponse } = utils.setup(robot);
-
   robot.message(/guy[sz]/i, async (msg) => {
     if (!guysRegex.test(msg.message.text)) {
       return;

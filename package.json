@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "lint": "18f-eslint '**/*.js'",
-    "start": "node main.js",
+    "start": "node main.js --trace-warnings",
     "test": "mocha test/*",
     "test-coverage": "nyc --reporter=lcov --reporter=text-summary mocha test/*",
     "validate-config": "slack-github-issues validate config/slack-github-issues.json"
@@ -46,8 +46,8 @@
     "chai": "^4.2.0",
     "co": "^4.6.0",
     "eslint-plugin-coffeescript": "^1.0.0",
-    "mocha": "^7.1.2",
     "hubot-test-helper": "^1.9.0",
+    "mocha": "^7.1.2",
     "nyc": "^15.0.1",
     "sinon": "^9.0.2"
   },
